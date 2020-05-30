@@ -38,6 +38,27 @@ namespace Miniblog.Core
                 public static readonly string Salt = "user:salt";
                 public static readonly string UserName = "user:username";
             }
+
+            /// <summary>
+            /// The settings for sending notifications. 
+            /// </summary>
+            public static class Notification
+            {
+                public static readonly string IsEmailEnabled = "notification:isEmailEnabled";
+
+                /// <summary>
+                /// The SMTP settings for sending email.
+                /// </summary>
+                public static class Email
+                {
+                    public static readonly string Host = "notification:email:host";
+                    public static readonly string Port = "notification:email:port";
+                    public static readonly string Ssl = "notification:email:ssl";
+                    public static readonly string UserName = "notification:email:username";
+                    public static readonly string Password = "notification:email:password";
+                }
+            }
+
         }
     }
 }

@@ -10,7 +10,8 @@ namespace Miniblog.Core
     using Microsoft.Extensions.Hosting;
 
     using Miniblog.Core.Services;
-
+    using Notifications;
+    using Notifications.Implementations;
     using WebEssentials.AspNetCore.OutputCaching;
 
     using WebMarkupMin.AspNetCore2;
@@ -94,9 +95,12 @@ namespace Miniblog.Core
             services.AddControllersWithViews();
             services.AddRazorPages();
 
+            services.Configure<BlogSettings>(this.Configuration.GetSection("blog"));
+            services.Configure<NotificationSettings>(this.Configuration.GetSection("notification"));
+            services.Configure<EmailSettings>(this.Configuration.GetSection("notification:email"));
             services.AddSingleton<IUserServices, BlogUserServices>();
             services.AddSingleton<IBlogService, FileBlogService>();
-            services.Configure<BlogSettings>(this.Configuration.GetSection("blog"));
+            services.AddTransient<IEmailSender, EmailSender>();
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddMetaWeblog<MetaWeblogService>();
 
