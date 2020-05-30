@@ -29,6 +29,7 @@ In search for custom designed themes for MiniBlog.Core? [Click here](https://fra
 - Works offline with use of [Service Worker](https://developers.google.com/web/fundamentals/primers/service-workers/)
 - Follows best practices for web applications
   - [See DareBoost report](https://www.dareboost.com/en/report/59e928f10cf224d151dfbe2d)
+- Notification via email if the user left a comment
 
 ## Technical features
 - High performance. Gets 100/100 points on Google PageSpeed Insights 
