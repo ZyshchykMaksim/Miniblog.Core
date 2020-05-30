@@ -13,21 +13,28 @@ namespace Miniblog.Core.Controllers
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using System.Xml;
-
+    using Notifications;
     using WebEssentials.AspNetCore.Pwa;
 
     public class BlogController : Controller
     {
         private readonly IBlogService blog;
-
+        private readonly IEmailSender emailSender;
         private readonly WebManifest manifest;
+        private readonly IOptionsSnapshot<BlogSettings> blogSettings;
+        private readonly IOptionsSnapshot<NotificationSettings> notificationSettings;
 
-        private readonly IOptionsSnapshot<BlogSettings> settings;
-
-        public BlogController(IBlogService blog, IOptionsSnapshot<BlogSettings> settings, WebManifest manifest)
+        public BlogController(
+            IBlogService blog,
+            IOptionsSnapshot<BlogSettings> blogSettings,
+            IOptionsSnapshot<NotificationSettings> notificationSettings,
+            IEmailSender emailSender,
+            WebManifest manifest)
         {
             this.blog = blog;
-            this.settings = settings;
+            this.emailSender = emailSender;
+            this.blogSettings = blogSettings;
+            this.notificationSettings = notificationSettings;
             this.manifest = manifest;
         }
 
@@ -42,7 +49,7 @@ namespace Miniblog.Core.Controllers
                 return this.View(nameof(Post), post);
             }
 
-            if (post is null || !post.AreCommentsOpen(this.settings.Value.CommentsCloseAfterDays))
+            if (post is null || !post.AreCommentsOpen(this.blogSettings.Value.CommentsCloseAfterDays))
             {
                 return this.NotFound();
             }
@@ -65,7 +72,20 @@ namespace Miniblog.Core.Controllers
                 await this.blog.SavePost(post).ConfigureAwait(false);
             }
 
-            return this.Redirect($"{post.GetEncodedLink()}#{comment.ID}");
+            var redirectLink = $"{post.GetEncodedLink()}#{comment.ID}";
+
+            if (!this.User.Identity.IsAuthenticated && this.notificationSettings.Value.IsEmailEnabled)
+            {
+                var commentLink = $"{this.HttpContext.Request.Scheme}://{this.HttpContext.Request.Host}{redirectLink}";
+
+                await this.emailSender.SendAsync(
+                    comment.Email,
+                    $"{this.blogSettings.Value.Name}: New comment",
+                    $"User with the email address '{comment.Email}' added new comment to post '{post.Slug}'. " +
+                    $"Click on the links to review it or respond - {commentLink}").ConfigureAwait(false);
+            }
+
+            return this.Redirect(redirectLink);
         }
 
         [Route("/blog/category/{category}/{page:int?}")]
@@ -76,10 +96,10 @@ namespace Miniblog.Core.Controllers
             var posts = this.blog.GetPostsByCategory(category);
 
             // apply paging filter.
-            var filteredPosts = posts.Skip(this.settings.Value.PostsPerPage * page).Take(this.settings.Value.PostsPerPage);
+            var filteredPosts = posts.Skip(this.blogSettings.Value.PostsPerPage * page).Take(this.blogSettings.Value.PostsPerPage);
 
             // set the view option
-            this.ViewData["ViewOption"] = this.settings.Value.ListView;
+            this.ViewData["ViewOption"] = this.blogSettings.Value.ListView;
 
             this.ViewData[Constants.TotalPostCount] = await posts.CountAsync().ConfigureAwait(true);
             this.ViewData[Constants.Title] = $"{this.manifest.Name} {category}";
@@ -153,10 +173,10 @@ namespace Miniblog.Core.Controllers
             var posts = this.blog.GetPosts();
 
             // apply paging filter.
-            var filteredPosts = posts.Skip(this.settings.Value.PostsPerPage * page).Take(this.settings.Value.PostsPerPage);
+            var filteredPosts = posts.Skip(this.blogSettings.Value.PostsPerPage * page).Take(this.blogSettings.Value.PostsPerPage);
 
             // set the view option
-            this.ViewData[Constants.ViewOption] = this.settings.Value.ListView;
+            this.ViewData[Constants.ViewOption] = this.blogSettings.Value.ListView;
 
             this.ViewData[Constants.TotalPostCount] = await posts.CountAsync().ConfigureAwait(true);
             this.ViewData[Constants.Title] = this.manifest.Name;
